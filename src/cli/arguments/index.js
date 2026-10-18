@@ -6,7 +6,7 @@ export const parseArguments = () => {
     country: null,
     league: null,
     fileType: null,
-    concurrency: 10,
+    concurrency: 4,
     saveInterval: 10,
     headless: true,
   };

@@ -44,7 +44,7 @@ npm run start
 | `country`      |    -    | ✅ if using `league` | Country to scrape (e.g. `brazil`)                                                  |
 | `league`       |    -    |          ❌          | Specific league to scrape (e.g. `serie-a`)                                         |
 | `fileType`     | `json`  |          ❌          | Output format: `json`, `json-array` or `csv`                                       |
-| `concurrency`  |  `10`   |          ❌          | Number of matches scraped in parallel. Higher = faster, but heavier on CPU/network |
+| `concurrency`  |  `4`    |          ❌          | Number of matches scraped in parallel. Higher = faster, but heavier on CPU/network |
 | `saveInterval` |  `10`   |          ❌          | Number of matches processed before data is saved to disk                           |
 | `headless`     | `true`  |          ❌          | Show browser UI (`false`) or run hidden (`true`)                                   |
 

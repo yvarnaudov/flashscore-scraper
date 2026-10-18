@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { firefox } from "playwright";
 import pLimit from "p-limit";
 import chalk from "chalk";
 
@@ -16,12 +16,13 @@ import {
 import { writeDataToFile } from "./files/handle/index.js";
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-const withRetry = async (fn, retries = 3) => {
+const MAX_RETRIES = 5;
+const withRetry = async (fn, retries = MAX_RETRIES) => {
   try {
     return await fn();
   } catch (err) {
     if (retries === 0) throw err;
-    const delay = (4 - retries) * 500;
+    const delay = (MAX_RETRIES + 1 - retries) * 2000;
     console.warn(`⚠️ Retry in ${delay}ms...`);
     await sleep(delay);
     return withRetry(fn, retries - 1);
@@ -35,8 +36,8 @@ const withRetry = async (fn, retries = 3) => {
   try {
     const cliOptions = parseArguments();
 
-    browser = await chromium.launch({ headless: cliOptions.headless });
-    context = await browser.newContext();
+    browser = await firefox.launch({ headless: cliOptions.headless });
+    context = await browser.newContext({ locale: "en-US" });
 
     const { fileName, season, fileType } = await promptUserOptions(
       context,

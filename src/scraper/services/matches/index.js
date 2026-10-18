@@ -1,11 +1,12 @@
 import { openPageAndNavigate, waitForSelectorSafe } from "../../index.js";
 
+const STATISTICS_TIMEOUT = 10_000;
+
 export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   const page = await openPageAndNavigate(context, `${leagueSeasonUrl}/${type}`);
 
   const LOAD_MORE_SELECTOR = '[data-testid="wcl-buttonLink"]';
-  const MATCH_SELECTOR =
-    ".event__match.event__match--static.event__match--twoLine";
+  const MATCH_SELECTOR = ".event__match.event__match--twoLine";
   const CLICK_DELAY = 600;
   const MAX_EMPTY_CYCLES = 4;
 
@@ -38,9 +39,7 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
 
   const matchIdList = await page.evaluate(() => {
     return Array.from(
-      document.querySelectorAll(
-        ".event__match.event__match--static.event__match--twoLine"
-      )
+      document.querySelectorAll(".event__match.event__match--twoLine")
     ).map((element) => {
       const id = element?.id?.replace("g_1_", "");
       const url = element.querySelector("a.eventRowLink")?.href ?? null;
@@ -57,26 +56,30 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
 export const getMatchData = async (context, { id: matchId, url }) => {
   const page = await openPageAndNavigate(context, url);
 
-  await waitForSelectorSafe(page, [
-    ".duelParticipant__startTime",
-    "div[data-testid='wcl-summaryMatchInformation'] > div'",
-  ]);
+  try {
+    await waitForSelectorSafe(page, [
+      ".duelParticipant__startTime",
+      "div[data-testid='wcl-summaryMatchInformation'] > div'",
+    ]);
 
-  const matchData = await extractMatchData(page);
-  const information = await extractMatchInformation(page);
+    const matchData = await extractMatchData(page);
+    const information = await extractMatchInformation(page);
 
-  const statsLink = buildStatsUrl(url);
-  await page.goto(statsLink, { waitUntil: "domcontentloaded" });
+    const statsLink = buildStatsUrl(url);
+    await page.goto(statsLink, { waitUntil: "domcontentloaded" });
 
-  await waitForSelectorSafe(page, [
-    "div[data-testid='wcl-statistics']",
-    "div[data-testid='wcl-statistics-value']",
-  ]);
+    await waitForSelectorSafe(
+      page,
+      ["div[data-testid='wcl-statistics']"],
+      STATISTICS_TIMEOUT
+    );
 
-  const statistics = await extractMatchStatistics(page);
+    const statistics = await extractMatchStatistics(page);
 
-  await page.close();
-  return { matchId, ...matchData, information, statistics };
+    return { matchId, ...matchData, information, statistics };
+  } finally {
+    await page.close();
+  }
 };
 
 const buildStatsUrl = (matchUrl) => {
@@ -86,7 +89,7 @@ const buildStatsUrl = (matchUrl) => {
   const base = url.origin + url.pathname.replace(/\/$/, "");
   const mid = url.searchParams.get("mid");
 
-  return `${base}/summary/stats/0/?mid=${mid}`;
+  return `${base}/summary/stats/?mid=${mid}`;
 };
 
 const extractMatchData = async (page) => {
@@ -195,20 +198,15 @@ const extractMatchStatistics = async (page) => {
   return await page.evaluate(async () => {
     return Array.from(
       document.querySelectorAll("div[data-testid='wcl-statistics']")
-    ).map((element) => ({
-      category: element
-        .querySelector("div[data-testid='wcl-statistics-category']")
-        ?.innerText.trim(),
-      homeValue: Array.from(
-        element.querySelectorAll(
-          "div[data-testid='wcl-statistics-value'] > strong"
-        )
-      )?.[0]?.innerText.trim(),
-      awayValue: Array.from(
-        element.querySelectorAll(
-          "div[data-testid='wcl-statistics-value'] > strong"
-        )
-      )?.[1]?.innerText.trim(),
-    }));
+    ).map((element) => {
+      const values = element.querySelectorAll("[class*='wcl-value']");
+      return {
+        category: element
+          .querySelector("[data-testid='wcl-simple-text-01']")
+          ?.innerText.trim(),
+        homeValue: values[0]?.innerText.trim(),
+        awayValue: values[1]?.innerText.trim(),
+      };
+    });
   });
 };
