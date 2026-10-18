@@ -1,0 +1,11 @@
+services:
+  scraper:
+    build: .
+    # Needed for the interactive prompts when no arguments are given.
+    stdin_open: true
+    tty: true
+    # Chromium/Firefox need more than Docker's default 64MB /dev/shm.
+    shm_size: "1gb"
+    init: true
+    volumes:
+      - ./src/data:/app/src/data
