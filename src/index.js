@@ -66,13 +66,17 @@ const withRetry = async (fn, retries = MAX_RETRIES) => {
     if (matchLinks.length === 0) {
       throw Error(
         `❌ No matches found on the results page\n` +
-          `Please verify that the league name provided is correct`
+        `Please verify that the league name provided is correct`
       );
     }
 
     stop();
 
     const matchData = readDataFromFile(fileName, fileType);
+    // Backfill round on matches that will be skipped.
+    matchLinks.forEach(({ id, round }) => {
+      if (matchData[id]) matchData[id].round = round;
+    });
     const matchesToScrape = matchLinks.filter(
       ({ id }) => cliOptions.update || !isAlreadyScraped(matchData[id])
     );
@@ -84,6 +88,7 @@ const withRetry = async (fn, retries = MAX_RETRIES) => {
     }
 
     if (matchesToScrape.length === 0) {
+      writeDataToFile(matchData, fileName, fileType);
       console.info("\n✅ Nothing new to scrape, file is up to date\n");
       return;
     }

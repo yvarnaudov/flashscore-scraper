@@ -23,8 +23,17 @@ export const writeCsvToFile = (data, fileName) => {
 
 const convertDataToCsv = (data) =>
   Object.keys(data).map((matchId) => {
-    const { stage, status, date, home, away, result, information, statistics } =
-      data[matchId];
+    const {
+      round,
+      stage,
+      status,
+      date,
+      home,
+      away,
+      result,
+      information,
+      statistics,
+    } = data[matchId];
     const informationObject = {};
     const statisticsObject = {};
 
@@ -42,6 +51,7 @@ const convertDataToCsv = (data) =>
 
     return {
       matchId,
+      round,
       stage,
       status,
       date,

@@ -38,13 +38,25 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   await waitForSelectorSafe(page, [MATCH_SELECTOR]);
 
   const matchIdList = await page.evaluate(() => {
-    return Array.from(
-      document.querySelectorAll(".event__match.event__match--twoLine")
-    ).map((element) => {
-      const id = element?.id?.replace("g_1_", "");
-      const url = element.querySelector("a.eventRowLink")?.href ?? null;
-      return { id, url };
-    });
+    // Round headers precede their matches in document order.
+    let round = null;
+    const list = [];
+    document
+      .querySelectorAll(".event__round, .event__match.event__match--twoLine")
+      .forEach((element) => {
+        if (element.classList.contains("event__round")) {
+          round =
+            element.textContent
+              .trim()
+              .replace(/\s+/g, " ")
+              .replace(/^round\s*/i, "") || null;
+          return;
+        }
+        const id = element?.id?.replace("g_1_", "");
+        const url = element.querySelector("a.eventRowLink")?.href ?? null;
+        list.push({ id, url, round });
+      });
+    return list;
   });
 
   await page.close();
@@ -53,7 +65,7 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   return matchIdList;
 };
 
-export const getMatchData = async (context, { id: matchId, url }) => {
+export const getMatchData = async (context, { id: matchId, url, round }) => {
   const page = await openPageAndNavigate(context, url);
 
   try {
@@ -76,7 +88,7 @@ export const getMatchData = async (context, { id: matchId, url }) => {
 
     const statistics = await extractMatchStatistics(page);
 
-    return { matchId, ...matchData, information, statistics };
+    return { matchId, round, ...matchData, information, statistics };
   } finally {
     await page.close();
   }
