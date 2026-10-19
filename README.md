@@ -47,6 +47,7 @@ npm run start
 | `concurrency`  |  `4`    |          ❌          | Number of matches scraped in parallel. Higher = faster, but heavier on CPU/network |
 | `saveInterval` |  `10`   |          ❌          | Number of matches processed before data is saved to disk                           |
 | `headless`     | `true`  |          ❌          | Show browser UI (`false`) or run hidden (`true`)                                   |
+| `update`       | `false` |          ❌          | Re-scrape every match. By default finished matches already in the file are skipped (`json` / `json-array` only) |
 
 ### Examples
 

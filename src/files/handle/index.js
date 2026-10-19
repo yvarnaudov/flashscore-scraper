@@ -1,6 +1,6 @@
 import { FileTypes } from "../../constants/index.js";
 
-import { writeJsonToFile } from "../../files/json/index.js";
+import { writeJsonToFile, readJsonFromFile } from "../../files/json/index.js";
 import { writeCsvToFile } from "../../files/csv/index.js";
 
 export const writeDataToFile = (data, fileName, fileType) => {
@@ -15,5 +15,16 @@ export const writeDataToFile = (data, fileName, fileType) => {
     case FileTypes.CSV:
       writeCsvToFile(data, outputFileName);
       break;
+  }
+};
+
+export const readDataFromFile = (fileName, fileType) => {
+  switch (fileType) {
+    case FileTypes.JSON:
+    case FileTypes.JSON_ARRAY:
+      return readJsonFromFile(`${fileName}${fileType.extension}`);
+
+    default:
+      return {};
   }
 };

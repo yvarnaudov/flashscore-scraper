@@ -13,7 +13,12 @@ import {
   getMatchData,
 } from "./scraper/services/matches/index.js";
 
-import { writeDataToFile } from "./files/handle/index.js";
+import { writeDataToFile, readDataFromFile } from "./files/handle/index.js";
+
+// Matches in these states won't change anymore, so they are safe to skip.
+const FINAL_STATUS = /^(finished|after |awarded|walkover|cancelled|abandoned)/i;
+const isAlreadyScraped = (match) =>
+  FINAL_STATUS.test(match?.status ?? "") && match?.statistics?.length > 0;
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 const MAX_RETRIES = 5;
@@ -67,13 +72,28 @@ const withRetry = async (fn, retries = MAX_RETRIES) => {
 
     stop();
 
-    const progressbar = initializeProgressbar(matchLinks.length);
+    const matchData = readDataFromFile(fileName, fileType);
+    const matchesToScrape = matchLinks.filter(
+      ({ id }) => cliOptions.update || !isAlreadyScraped(matchData[id])
+    );
+    const skipped = matchLinks.length - matchesToScrape.length;
+    if (skipped > 0) {
+      console.info(
+        `⏭️  Skipping ${skipped} already scraped matches (use update=true to re-scrape)`
+      );
+    }
+
+    if (matchesToScrape.length === 0) {
+      console.info("\n✅ Nothing new to scrape, file is up to date\n");
+      return;
+    }
+
+    const progressbar = initializeProgressbar(matchesToScrape.length);
     const limit = pLimit(cliOptions.concurrency);
 
-    const matchData = {};
     let processedCount = 0;
 
-    const tasks = matchLinks.map((matchLink) =>
+    const tasks = matchesToScrape.map((matchLink) =>
       limit(async () => {
         const data = await withRetry(() => getMatchData(context, matchLink));
         matchData[matchLink.id] = data;

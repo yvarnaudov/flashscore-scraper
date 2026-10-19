@@ -22,3 +22,22 @@ const toArray = (data) =>
     matchId,
     ...structuredClone(matchData),
   }));
+
+export const readJsonFromFile = (fileName) => {
+  const filePath = path.join(OUTPUT_PATH, fileName);
+  if (!fs.existsSync(filePath)) return {};
+
+  try {
+    const content = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    if (!Array.isArray(content)) return content;
+
+    return Object.fromEntries(
+      content.map(({ matchId, ...matchData }) => [matchId, matchData])
+    );
+  } catch {
+    throw Error(
+      `❌ Failed to read existing data from ${filePath}\n` +
+        `Fix or remove the file and run again`
+    );
+  }
+};

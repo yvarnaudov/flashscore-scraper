@@ -6,9 +6,10 @@ export const parseArguments = () => {
     country: null,
     league: null,
     fileType: null,
-    concurrency: 4,
+    concurrency: 2,
     saveInterval: 10,
     headless: true,
+    update: false,
   };
 
   args.forEach((arg) => {
@@ -21,6 +22,8 @@ export const parseArguments = () => {
       options.saveInterval = Number(arg.split("=")[1]);
     if (arg.startsWith("headless="))
       options.headless = arg.split("=")[1] !== "false";
+    if (arg.startsWith("update=")) options.update = arg.split("=")[1] === "true";
+    if (arg === "--update") options.update = true;
     if (arg === "--no-headless") options.headless = false;
     if (arg === "--headless") options.headless = true;
   });
@@ -37,7 +40,7 @@ export const parseArguments = () => {
         .join(", ");
       throw Error(
         `❌ Invalid fileType: "${userInput}"\n` +
-          `Accepted file types are: ${acceptedTypes}`
+        `Accepted file types are: ${acceptedTypes}`
       );
     }
 
@@ -47,8 +50,8 @@ export const parseArguments = () => {
   if (options.league && !options.country) {
     throw Error(
       `❌ Missing required argument: country=<country-name>\n` +
-        `You provided a league "${options.league}" but did not specify a country\n` +
-        `Usage example: country=<country-name> league=<league-name>`
+      `You provided a league "${options.league}" but did not specify a country\n` +
+      `Usage example: country=<country-name> league=<league-name>`
     );
   }
 
