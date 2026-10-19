@@ -219,7 +219,7 @@ const extractMatchInformation = async (page) => {
 
 const extractMatchStatistics = async (page) => {
   return await page.evaluate(async () => {
-    return Array.from(
+    const statistics = Array.from(
       document.querySelectorAll("div[data-testid='wcl-statistics']")
     ).map((element) => {
       const values = element.querySelectorAll("[class*='wcl-value']");
@@ -231,5 +231,28 @@ const extractMatchStatistics = async (page) => {
         awayValue: values[1]?.innerText.trim(),
       };
     });
+
+    // Icon-only badges (corners, cards) have no text label.
+    const BADGE_CATEGORIES = {
+      "wcl-icon-incidents-corner": "Corner kicks",
+      "wcl-icon-incidents-yellow-card": "Yellow cards",
+      "wcl-icon-incidents-red-card": "Red cards",
+    };
+    document
+      .querySelectorAll("[class*='incidentValueBadge']")
+      .forEach((badge) => {
+        const icon = badge.querySelector("[data-testid^='wcl-icon-incidents']");
+        const category = BADGE_CATEGORIES[icon?.dataset.testid];
+        if (!category || statistics.some((s) => s.category === category)) {
+          return;
+        }
+        const [homeValue, awayValue] = badge.innerText
+          .split("\n")
+          .map((v) => v.trim())
+          .filter(Boolean);
+        statistics.push({ category, homeValue, awayValue });
+      });
+
+    return statistics;
   });
 };
