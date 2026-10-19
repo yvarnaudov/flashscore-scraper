@@ -5,37 +5,48 @@ const STATISTICS_TIMEOUT = 10_000;
 export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   const page = await openPageAndNavigate(context, `${leagueSeasonUrl}/${type}`);
 
-  const LOAD_MORE_SELECTOR = '[data-testid="wcl-buttonLink"]';
   const MATCH_SELECTOR = ".event__match.event__match--twoLine";
-  const CLICK_DELAY = 600;
-  const MAX_EMPTY_CYCLES = 4;
+  const BUTTON_WAIT = 5_000;
+  const LOAD_WAIT = 10_000;
+  const MAX_EMPTY_CYCLES = 3;
+
+  await waitForSelectorSafe(page, [MATCH_SELECTOR]);
+
+  const loadMoreBtn = page
+    .locator("[data-testid='wcl-section-footer'] button", {
+      hasText: /show more matches/i,
+    })
+    .first();
 
   let emptyCycles = 0;
 
-  while (true) {
-    const countBefore = await page.$$eval(MATCH_SELECTOR, (els) => els.length);
-
-    const loadMoreBtn = await page.$(LOAD_MORE_SELECTOR);
-    if (!loadMoreBtn) break;
-
+  while (emptyCycles < MAX_EMPTY_CYCLES) {
     try {
-      await loadMoreBtn.click();
-      await page.waitForTimeout(CLICK_DELAY);
+      await loadMoreBtn.waitFor({ state: "visible", timeout: BUTTON_WAIT });
     } catch {
       break;
     }
 
-    const countAfter = await page.$$eval(MATCH_SELECTOR, (els) => els.length);
+    const countBefore = await page.locator(MATCH_SELECTOR).count();
 
-    if (countAfter === countBefore) {
-      emptyCycles++;
-      if (emptyCycles >= MAX_EMPTY_CYCLES) break;
-    } else {
+    // DOM click avoids failures when the cookie banner overlays the button.
+    await loadMoreBtn.evaluate((el) => {
+      el.scrollIntoView({ block: "center" });
+      el.click();
+    });
+
+    try {
+      await page.waitForFunction(
+        ({ selector, count }) =>
+          document.querySelectorAll(selector).length > count,
+        { selector: MATCH_SELECTOR, count: countBefore },
+        { timeout: LOAD_WAIT }
+      );
       emptyCycles = 0;
+    } catch {
+      emptyCycles++;
     }
   }
-
-  await waitForSelectorSafe(page, [MATCH_SELECTOR]);
 
   const matchIdList = await page.evaluate(() => {
     // Round headers precede their matches in document order.
