@@ -6,7 +6,7 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   const page = await openPageAndNavigate(context, `${leagueSeasonUrl}/${type}`);
 
   const MATCH_SELECTOR = ".event__match.event__match--twoLine";
-  const BUTTON_WAIT = 5_000;
+  const BUTTON_WAIT = 20_000;
   const LOAD_WAIT = 10_000;
   const MAX_EMPTY_CYCLES = 3;
 
@@ -21,6 +21,8 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   let emptyCycles = 0;
 
   while (emptyCycles < MAX_EMPTY_CYCLES) {
+    // The container is slower, so the button can take a while to re-render
+    // after a load; only treat it as gone after a generous wait.
     try {
       await loadMoreBtn.waitFor({ state: "visible", timeout: BUTTON_WAIT });
     } catch {
