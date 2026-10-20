@@ -37,11 +37,18 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
 
     const countBefore = await page.locator(MATCH_SELECTOR).count();
 
-    // DOM click avoids failures when the cookie banner overlays the button.
-    await loadMoreBtn.evaluate((el) => {
-      el.scrollIntoView({ block: "center" });
-      el.click();
-    });
+    // DOM click avoids failures when the cookie banner overlays the button;
+    // if it has no effect, retry with a real (trusted) mouse click.
+    if (emptyCycles === 0) {
+      await loadMoreBtn.evaluate((el) => {
+        el.scrollIntoView({ block: "center" });
+        el.click();
+      });
+    } else {
+      await loadMoreBtn
+        .click({ force: true, timeout: BUTTON_WAIT })
+        .catch((e) => debugLog(`[${type}] real click failed: ${e.message}`));
+    }
 
     try {
       await page.waitForFunction(
@@ -54,6 +61,10 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
       debugLog(`[${type}] loaded more, was ${countBefore}`);
     } catch {
       emptyCycles++;
+      if (emptyCycles === 1)
+        await page
+          .screenshot({ path: `./src/data/debug-${type}.png` })
+          .catch(() => {});
       debugLog(`[${type}] no new matches after click (${countBefore}), empty cycle ${emptyCycles}`);
     }
   }
