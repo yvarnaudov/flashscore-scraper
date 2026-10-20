@@ -17,6 +17,16 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
 
   await waitForSelectorSafe(page, [MATCH_SELECTOR]);
 
+  // Accept the consent banner; the site can ignore "show more" while it is open.
+  try {
+    await page
+      .locator("#onetrust-accept-btn-handler")
+      .click({ timeout: BUTTON_WAIT });
+    debugLog(`[${type}] consent accepted`);
+  } catch {
+    debugLog(`[${type}] no consent banner`);
+  }
+
   const loadMoreBtn = page
     .locator("[data-testid='wcl-section-footer'] button", {
       hasText: /show more matches/i,
