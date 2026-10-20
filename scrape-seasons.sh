@@ -14,5 +14,5 @@ end="${4:-2025}"
 fileType="${5:-json}"
 
 for ((y = start; y <= end; y++)); do
-  docker compose run --rm scraper country="$country" league="$league-$y-$((y + 1))" fileType="$fileType"
+  docker compose run --rm -T scraper country="$country" league="$league-$y-$((y + 1))" fileType="$fileType"
 done
