@@ -1,6 +1,11 @@
+import { appendFileSync } from "node:fs";
 import { openPageAndNavigate, waitForSelectorSafe } from "../../index.js";
 
 const STATISTICS_TIMEOUT = 10_000;
+
+// The spinner overwrites console output, so keep a debug trail on disk.
+const debugLog = (message) =>
+  appendFileSync("./src/data/debug.log", `${new Date().toISOString()} ${message}\n`);
 
 export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   const page = await openPageAndNavigate(context, `${leagueSeasonUrl}/${type}`);
@@ -26,7 +31,7 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
     try {
       await loadMoreBtn.waitFor({ state: "visible", timeout: BUTTON_WAIT });
     } catch {
-      console.error(`[matches] button not visible, stopping at ${await page.locator(MATCH_SELECTOR).count()} matches`);
+      debugLog(`[${type}] button not visible, stopping at ${await page.locator(MATCH_SELECTOR).count()} matches`);
       break;
     }
 
@@ -46,9 +51,10 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
         { timeout: LOAD_WAIT }
       );
       emptyCycles = 0;
+      debugLog(`[${type}] loaded more, was ${countBefore}`);
     } catch {
       emptyCycles++;
-      console.error(`[matches] no new matches after click (${countBefore}), empty cycle ${emptyCycles}`);
+      debugLog(`[${type}] no new matches after click (${countBefore}), empty cycle ${emptyCycles}`);
     }
   }
 
