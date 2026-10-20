@@ -1,42 +1,16 @@
-import { appendFileSync } from "node:fs";
 import { openPageAndNavigate, waitForSelectorSafe } from "../../index.js";
 
 const STATISTICS_TIMEOUT = 10_000;
-
-// The spinner overwrites console output, so keep a debug trail on disk.
-const debugLog = (message) =>
-  appendFileSync("./src/data/debug.log", `${new Date().toISOString()} ${message}\n`);
 
 export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   const page = await openPageAndNavigate(context, `${leagueSeasonUrl}/${type}`);
 
   const MATCH_SELECTOR = ".event__match.event__match--twoLine";
-  const BUTTON_WAIT = 20_000;
+  const BUTTON_WAIT = 5_000;
   const LOAD_WAIT = 10_000;
   const MAX_EMPTY_CYCLES = 3;
 
-  page.on("requestfailed", (req) =>
-    debugLog(`[${type}] request failed ${req.url()} ${req.failure()?.errorText}`)
-  );
-  page.on("response", (res) => {
-    if (res.status() >= 400)
-      debugLog(`[${type}] HTTP ${res.status()} ${res.url()}`);
-  });
-  page.on("console", (msg) => {
-    if (msg.type() === "error") debugLog(`[${type}] page error: ${msg.text()}`);
-  });
-
   await waitForSelectorSafe(page, [MATCH_SELECTOR]);
-
-  // Accept the consent banner; the site can ignore "show more" while it is open.
-  try {
-    await page
-      .locator("#onetrust-accept-btn-handler")
-      .click({ timeout: BUTTON_WAIT });
-    debugLog(`[${type}] consent accepted`);
-  } catch {
-    debugLog(`[${type}] no consent banner`);
-  }
 
   const loadMoreBtn = page
     .locator("[data-testid='wcl-section-footer'] button", {
@@ -47,29 +21,19 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   let emptyCycles = 0;
 
   while (emptyCycles < MAX_EMPTY_CYCLES) {
-    // The container is slower, so the button can take a while to re-render
-    // after a load; only treat it as gone after a generous wait.
     try {
       await loadMoreBtn.waitFor({ state: "visible", timeout: BUTTON_WAIT });
     } catch {
-      debugLog(`[${type}] button not visible, stopping at ${await page.locator(MATCH_SELECTOR).count()} matches`);
       break;
     }
 
     const countBefore = await page.locator(MATCH_SELECTOR).count();
 
-    // DOM click avoids failures when the cookie banner overlays the button;
-    // if it has no effect, retry with a real (trusted) mouse click.
-    if (emptyCycles === 0) {
-      await loadMoreBtn.evaluate((el) => {
-        el.scrollIntoView({ block: "center" });
-        el.click();
-      });
-    } else {
-      await loadMoreBtn
-        .click({ force: true, timeout: BUTTON_WAIT })
-        .catch((e) => debugLog(`[${type}] real click failed: ${e.message}`));
-    }
+    // DOM click avoids failures when the cookie banner overlays the button.
+    await loadMoreBtn.evaluate((el) => {
+      el.scrollIntoView({ block: "center" });
+      el.click();
+    });
 
     try {
       await page.waitForFunction(
@@ -79,14 +43,8 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
         { timeout: LOAD_WAIT }
       );
       emptyCycles = 0;
-      debugLog(`[${type}] loaded more, was ${countBefore}`);
     } catch {
       emptyCycles++;
-      if (emptyCycles === 1)
-        await page
-          .screenshot({ path: `./src/data/debug-${type}.png` })
-          .catch(() => {});
-      debugLog(`[${type}] no new matches after click (${countBefore}), empty cycle ${emptyCycles}`);
     }
   }
 

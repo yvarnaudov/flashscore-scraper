@@ -42,7 +42,13 @@ const withRetry = async (fn, retries = MAX_RETRIES) => {
     const cliOptions = parseArguments();
 
     browser = await firefox.launch({ headless: cliOptions.headless });
-    context = await browser.newContext({ locale: "en-US" });
+    // Flashscore's "show more matches" feed returns nothing new when the
+    // browser runs in UTC (the default in Docker), so pin a non-UTC zone.
+    // Match times are scraped in this zone; override with SCRAPER_TIMEZONE.
+    context = await browser.newContext({
+      locale: "en-US",
+      timezoneId: process.env.SCRAPER_TIMEZONE || "Europe/Sofia",
+    });
 
     const { fileName, season, fileType } = await promptUserOptions(
       context,
