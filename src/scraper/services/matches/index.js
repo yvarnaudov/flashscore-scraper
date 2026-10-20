@@ -15,6 +15,17 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
   const LOAD_WAIT = 10_000;
   const MAX_EMPTY_CYCLES = 3;
 
+  page.on("requestfailed", (req) =>
+    debugLog(`[${type}] request failed ${req.url()} ${req.failure()?.errorText}`)
+  );
+  page.on("response", (res) => {
+    if (res.status() >= 400)
+      debugLog(`[${type}] HTTP ${res.status()} ${res.url()}`);
+  });
+  page.on("console", (msg) => {
+    if (msg.type() === "error") debugLog(`[${type}] page error: ${msg.text()}`);
+  });
+
   await waitForSelectorSafe(page, [MATCH_SELECTOR]);
 
   // Accept the consent banner; the site can ignore "show more" while it is open.
