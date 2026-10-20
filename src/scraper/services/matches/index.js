@@ -26,6 +26,7 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
     try {
       await loadMoreBtn.waitFor({ state: "visible", timeout: BUTTON_WAIT });
     } catch {
+      console.error(`[matches] button not visible, stopping at ${await page.locator(MATCH_SELECTOR).count()} matches`);
       break;
     }
 
@@ -47,6 +48,7 @@ export const getMatchLinks = async (context, leagueSeasonUrl, type) => {
       emptyCycles = 0;
     } catch {
       emptyCycles++;
+      console.error(`[matches] no new matches after click (${countBefore}), empty cycle ${emptyCycles}`);
     }
   }
 
