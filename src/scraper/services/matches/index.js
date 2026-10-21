@@ -87,7 +87,6 @@ export const getMatchData = async (context, { id: matchId, url, round }) => {
 
     const matchData = await extractMatchData(page);
     const information = await extractMatchInformation(page);
-    const realCards = await extractRealCards(page);
 
     const statsLink = buildStatsUrl(url);
     await page.goto(statsLink, { waitUntil: "domcontentloaded" });
@@ -98,12 +97,7 @@ export const getMatchData = async (context, { id: matchId, url, round }) => {
       STATISTICS_TIMEOUT
     );
 
-    const matchStatistics = await extractMatchStatistics(page);
-    // Unplayed matches have no incidents or stats; skip fake zero counts.
-    const statistics =
-      matchStatistics.length || realCards.hasIncidents
-        ? [...matchStatistics, ...realCards.statistics]
-        : [];
+    const statistics = await extractMatchStatistics(page);
 
     return { matchId, round, ...matchData, information, statistics };
   } finally {
@@ -220,51 +214,6 @@ const extractMatchInformation = async (page) => {
       }
       return acc;
     }, []);
-  });
-};
-
-// Counts cards from the summary incidents, skipping those given while the
-// player was not on the pitch (e.g. bench / staff), unlike the stats tab totals.
-const extractRealCards = async (page) => {
-  return await page.evaluate(() => {
-    const counts = {
-      yellow: { home: 0, away: 0 },
-      red: { home: 0, away: 0 },
-    };
-
-    document
-      .querySelectorAll(".smv__homeParticipant, .smv__awayParticipant")
-      .forEach((row) => {
-        const side = row.classList.contains("smv__homeParticipant")
-          ? "home"
-          : "away";
-        if (/not on pitch/i.test(row.textContent)) return;
-
-        const icon = row.querySelector("svg.card-ico");
-        if (!icon) return;
-
-        // Second-yellow icons count as red cards.
-        if (icon.matches(".redCard-ico, .yellowRedCard-ico")) {
-          counts.red[side]++;
-        } else if (icon.matches(".yellowCard-ico")) {
-          counts.yellow[side]++;
-        }
-      });
-
-    const hasIncidents = !!document.querySelector(".smv__participantRow");
-    const statistics = [
-      {
-        category: "Real yellow cards",
-        homeValue: String(counts.yellow.home),
-        awayValue: String(counts.yellow.away),
-      },
-      {
-        category: "Real red cards",
-        homeValue: String(counts.red.home),
-        awayValue: String(counts.red.away),
-      },
-    ];
-    return { hasIncidents, statistics };
   });
 };
 
